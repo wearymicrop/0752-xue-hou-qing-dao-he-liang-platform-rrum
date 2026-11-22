@@ -1,0 +1,8 @@
+:root {
+  color-scheme:light;
+  --bg:#e8eff5; --paper:#fbfdff; --wash:#edf4f8; --nav:#f3f7fb; --ink:#173249;
+  --sub:#4b6477; --line:#c8d9e5; --strong:#92adc0; --accent:#23587f; --sky:#317fa5;
+  --covered:#207763; --pending:#af6325; --unknown:#657b91; --fail:#a13b37;
+  --mono:ui-monospace,Menlo,monospace; --sans:"PingFang SC","Microsoft YaHei",sans-serif;
+  --pad:16px; --gap:14px; --rail:190px; --radius:5px; --row:34px;
+}

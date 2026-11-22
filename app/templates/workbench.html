@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ title }}</title>
+<link rel="stylesheet" href="/static/theme.css"><link rel="stylesheet" href="/static/layout.css">
+<script type="module" src="/static/desk.js"></script>
+</head>
+<body>
+<aside class="rail">
+  <div class="brand"><span class="marker" aria-hidden="true">↟</span><div><small>道路养护</small><strong>雪后清道核量台</strong></div></div>
+  <nav aria-label="作业环节">
+    <a href="#routes" data-stage="routes">线路册</a><a href="#tracks" data-stage="tracks">车辆轨迹</a>
+    <a href="#projection" data-stage="projection">里程投影</a><a href="#windows" data-stage="windows">清扫窗口</a>
+    <a href="#coverage" data-stage="coverage" aria-current="page">覆盖合并</a><a href="#reconcile" data-stage="reconcile">缺扫对账</a>
+    <a href="#archive" data-stage="archive">工单凭证</a>
+  </nav>
+  <div class="rail-meta"><span>路段核量</span><strong>{{ project }}</strong></div>
+</aside>
+<div class="workspace">
+  <header><div><p class="eyeline">道路测绘 / 除雪作业</p><h1>道路覆盖地图</h1></div>
+    <form id="toolbar"><label>样例 <select id="sample">{% for value, label in samples.items() %}<option value="{{ value }}"{% if value == sample %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+      <input id="file" type="file" accept=".json,application/json" hidden><button type="button" id="import">导入批次</button><button class="primary">运行核量</button></form>
+  </header>
+  <main>
+    <section class="kpis" id="metrics" aria-label="里程汇总"></section>
+    <div class="grid">
+      <section class="panel cartography">
+        <div class="panel-head"><h2>方向覆盖</h2><div class="key"><span>有效覆盖</span><span>待扫</span><span>证据不足</span></div></div>
+        <div class="map"><canvas id="map" aria-label="道路里程示意图"></canvas><span class="north" aria-hidden="true">↑<br>北</span></div>
+        <div class="ruler"><span id="route-label"></span><div id="scale"></div><div id="ticks"></div></div>
+      </section>
+      <section class="panel inspect">
+        <div class="panel-head"><h2 id="stage-title">覆盖合并</h2><label class="route-select">方向 <select id="lane"></select></label></div>
+        <div id="stage-detail"></div>
+      </section>
+      <section class="panel observations">
+        <div class="panel-head"><h2>判定记录</h2><span id="records-count"></span></div>
+        <div id="issues" class="scroll"></div>
+      </section>
+    </div>
+  </main>
+  <footer><span id="balance"></span><span id="message" role="status"></span><span id="batch"></span></footer>
+</div>
+<script id="initial" type="application/json">{{ initial | tojson }}</script>
+</body></html>
