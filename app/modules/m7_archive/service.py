@@ -8,14 +8,19 @@ from .manifest import create
 
 
 def execute(ledger, source):
+    """Evaluate a batch and publish its dispatch list in one transaction.
+
+    The whole update is atomic: if evaluation, the replay digest check or the
+    plan publication fails, the previously published task list (and its
+    handover progress) stays readable and unchanged.
+    """
     start = perf_counter_ns()
     result = evaluate(source)
     manifest = create(source, result, (perf_counter_ns() - start) // 1_000_000)
     snapshot = {"id": manifest["id"], "manifest": manifest, "result": result}
-    saved, reused = ledger.save(manifest["id"], source, snapshot)
-    if saved["manifest"]["digest"] != manifest["digest"]:
-        raise DomainError("REPLAY_MISMATCH", "重算摘要不一致，请复核规则版本", 409)
-    return {**saved, "reused": reused}
+    saved, reused, publication = ledger.archive(
+        manifest["id"], source, snapshot, result["dispatch"], manifest["generated_at"])
+    return {**saved, "reused": reused, "dispatch": publication}
 
 
 def rerun(ledger, ident):
@@ -23,7 +28,26 @@ def rerun(ledger, ident):
     result = evaluate(source)
     if digest(result) != previous["manifest"]["digest"]:
         raise DomainError("REPLAY_MISMATCH", "重跑结果与归档不一致", 409)
-    return {**previous, "reused": True}
+    view, publication = ledger.publish_dispatch(
+        ident, result["dispatch"], previous["manifest"]["generated_at"])
+    return {**previous, "reused": True, "dispatch": publication, "plan": view}
+
+
+def publish(ledger, ident):
+    """(Re)publish the dispatch list for an archived run from its frozen input.
+
+    This is the resume path: a first import that failed before the plan was
+    written can be completed later without touching the run snapshot, and a
+    second call with the same plan is a no-op.
+    """
+    source, previous = ledger.read(ident)
+    result = evaluate(source)
+    if digest(result) != previous["manifest"]["digest"]:
+        raise DomainError("REPLAY_MISMATCH", "重算结果与归档不一致", 409)
+    view, publication = ledger.publish_dispatch(
+        ident, result["dispatch"], previous["manifest"]["generated_at"])
+    return {"id": ident, "manifest": previous["manifest"], "plan": view,
+            "dispatch": publication}
 
 
 def sign(ledger, ident, body):

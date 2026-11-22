@@ -1,6 +1,6 @@
 const colors = {covered:'#21816a', pending:'#b56b31', unknown:'#7089a0'};
 
-export function draw(canvas, roads, selected) {
+export function draw(canvas, roads, selected, jobs = []) {
   const width = canvas.clientWidth, height = canvas.clientHeight, ratio = devicePixelRatio || 1;
   if (!width || !height) return;
   canvas.width = width * ratio; canvas.height = height * ratio;
@@ -41,5 +41,38 @@ export function draw(canvas, roads, selected) {
     ctx.font = `${active ? 'bold ' : ''}12px sans-serif`;
     ctx.lineWidth = 5; ctx.strokeStyle = '#f2f8fb'; ctx.strokeText(row.name, x - 23, y - 13);
     ctx.fillStyle = '#223f57'; ctx.fillText(row.name, x - 23, y - 13);
+  }
+  if (!jobs.length) return;
+  // Dispatch overlay: each vehicle in its own colour, hop number at the entry,
+  // a dashed line for the transfer drive between two stitched gaps.
+  const palette = ['#23587f','#9c3d4f','#5a6f1f','#7a4b9c','#b06d16','#1d6f74','#8b2f6b'];
+  const byVehicle = new Map();
+  for (const job of jobs) {
+    if (!job.task_id) continue;
+    byVehicle.set(job.vehicle, [...(byVehicle.get(job.vehicle) ?? []), job]);
+  }
+  let index = 0;
+  for (const [vehicle, stops] of byVehicle) {
+    const colour = palette[index++ % palette.length];
+    let previous = null;
+    for (const stop of stops) {
+      const row = roads.find(item => item.road === stop.road && item.direction === stop.direction);
+      if (!row) continue;
+      const points = [xy(row, stop.entry_m), xy(row, stop.exit_m)];
+      if (previous) {
+        ctx.setLineDash([4,4]); ctx.globalAlpha = .65;
+        stroke([previous, points[0]], colour, 2);
+        ctx.globalAlpha = 1; ctx.setLineDash([]);
+      }
+      stroke(points, colour, 5);
+      if (stops.length > 1) {
+        ctx.beginPath(); ctx.arc(...points[0], 8, 0, 2 * Math.PI);
+        ctx.fillStyle = colour; ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(String(stop.seq), points[0][0], points[0][1] + 3.5);
+        ctx.textAlign = 'start';
+      }
+      previous = points[1];
+    }
   }
 }
